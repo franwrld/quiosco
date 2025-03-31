@@ -2,32 +2,39 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\LoginRequest;
-use App\Http\Requests\RegistroRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\LoginRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use App\Http\Requests\RegistroRequest;
+use Illuminate\Support\Facades\Validator;
 
 class AuthController extends Controller
 {
-    public function register(RegistroRequest $request) {
+    public function register(RegistroRequest $request)
+    {
         // Validar el registro
         $data = $request->validated();
-        //Crear/Registrar usuario
+
+        // Crear el usuario
         $user = User::create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'password' => bcrypt($data['password'])
+            'password' => Hash::make($data['password']),
         ]);
-        // Retornar una respuesta
+
+        // Retornar respuesta
         return [
             'token' => $user->createToken('token')->plainTextToken,
             'user' => $user
         ];
     }
+
     public function login(LoginRequest $request) {
-        // Validar el login
         $data = $request->validated();
+
         // Revisar el password
         if(!Auth::attempt($data)) {
             return response([
@@ -35,15 +42,20 @@ class AuthController extends Controller
             ], 422);
         }
 
-        // Autenticar Usuario
+        // Autenticar al usuario
         $user = Auth::user();
-        return response()->json([
+        return [
             'token' => $user->createToken('token')->plainTextToken,
             'user' => $user
-        ])->header('Access-Control-Allow-Origin', '*')
-          ->header('Access-Control-Allow-Credentials', 'true');
+        ];
     }
+
     public function logout(Request $request) {
-        
+        $user = $request->user();
+        $user->currentAccessToken()->delete();
+
+        return [
+            'user' => null
+        ];
     }
 }
